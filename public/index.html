@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#07152d">
+<title>ShortsForge – Viral Shorts Creator</title>
+<style>
+:root{--bg:#07152d;--panel:#102443;--panel2:#142d50;--line:#25466f;--text:#f4f8ff;--muted:#9db2cf;--blue:#1687ff;--cyan:#20c8e8;--danger:#ff667e}
+*{box-sizing:border-box}body{margin:0;background:linear-gradient(145deg,#06132a,#0b2040 65%,#07152d);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,sans-serif;min-height:100vh}button,input,textarea{font:inherit}button{cursor:pointer;border:0;border-radius:12px;padding:12px 15px;font-weight:750;background:var(--blue);color:white}.secondary{background:#203b60;border:1px solid var(--line)}.wrap{max-width:1100px;margin:auto;padding:18px}.top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 0 20px}.brand{font-size:21px;font-weight:900;letter-spacing:-.5px}.brand span{color:#48caff}.pill{font-size:12px;color:#a9dfff;border:1px solid #27629b;border-radius:99px;padding:6px 10px}.layout{display:grid;grid-template-columns:220px 1fr;gap:18px}.side,.card{background:rgba(16,36,67,.94);border:1px solid var(--line);border-radius:19px;padding:18px}.side button{display:block;width:100%;text-align:left;margin:6px 0;background:transparent;color:#c9d9ed}.side button.active{background:#174d86;color:white}.main{min-width:0}.card{margin-bottom:16px}.eyebrow{font-size:11px;color:#62cfff;font-weight:850;letter-spacing:1.5px}.h{font-size:23px;font-weight:900;margin:7px 0}.muted{color:var(--muted);font-size:13px;line-height:1.55}label{display:block;font-size:13px;font-weight:750;margin:14px 0 7px}input,textarea{width:100%;border-radius:11px;border:1px solid #315174;background:#091a33;color:white;padding:13px;outline:none}input:focus,textarea:focus{border-color:#39b8ff}textarea{min-height:76px;resize:vertical}.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}.actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:15px}.clip{padding:13px;border:1px solid #315174;border-radius:13px;margin-top:10px;background:#0b1d37}.clip strong{display:block}.clip small{color:#a8bfd9}.result{margin-top:12px;color:#9fe2ff;font-size:13px;overflow-wrap:anywhere}.hidden{display:none!important}.note{background:#142e50;border-left:3px solid #20c8e8;padding:12px;border-radius:9px;color:#c4d8ee;font-size:12px;line-height:1.5}.status{font-size:12px;color:#a9c1dc}.footer{text-align:center;color:#8098b7;font-size:11px;padding:18px}@media(max-width:760px){.layout{grid-template-columns:1fr}.side{display:flex;gap:6px;overflow:auto;padding:8px}.side button{white-space:nowrap;width:auto;margin:0}.wrap{padding:12px}.row{grid-template-columns:1fr}.top{padding-bottom:13px}.h{font-size:21px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="top"><div class="brand">⚡ Shorts<span>Forge</span></div><div class="pill">AI CLIP STUDIO</div></header>
+<div class="layout">
+<aside class="side">
+<button class="active" data-page="create">✂️ Create Shorts</button>
+<button data-page="settings">⚙️ Settings</button>
+</aside>
+<main class="main">
+<section id="create">
+<div class="card">
+<div class="eyebrow">AI VIDEO DISCOVERY</div><div class="h">Find your best moments</div>
+<p class="muted">Paste a public YouTube link for Gemini to suggest strong short-form moments. Analysis uses YouTube video understanding; rendering needs an authorized direct video-file URL.</p>
+<label>YouTube video link (for AI analysis)</label>
+<input id="youtubeUrl" type="url" placeholder="https://www.youtube.com/watch?v=...">
+<div class="actions"><button id="analyze">✨ Find viral moments</button><span class="status" id="aiStatus"></span></div>
+<div id="clips"></div>
+</div>
+<div class="card">
+<div class="eyebrow">MP4 RENDERER</div><div class="h">Create an actual video file</div>
+<div class="note">To export without uploading from your phone, provide a direct public media-file URL for a video you own or are authorized to use (for example, an MP4 hosted on your own website or cloud storage). A YouTube watch-page URL is not a direct media file, and this app does not bypass YouTube download restrictions.</div>
+<label>Authorized direct video-file URL</label>
+<input id="videoUrl" type="url" placeholder="https://your-site.com/my-sermon-video.mp4">
+<div class="row">
+<div><label>Start time (seconds)</label><input id="start" type="number" min="0" value="0"></div>
+<div><label>End time (seconds)</label><input id="end" type="number" min="1" value="45"></div>
+</div>
+<label>Caption on video (optional)</label>
+<textarea id="caption" maxlength="220" placeholder="Add a short hook or caption..."></textarea>
+<div class="actions"><button id="render">🎬 Render MP4</button><span id="renderStatus" class="status"></span></div>
+<div id="downloadResult" class="result"></div>
+</div>
+</section>
+<section id="settings" class="hidden">
+<div class="card"><div class="eyebrow">PRIVATE CONFIGURATION</div><div class="h">Gemini API settings</div>
+<p class="muted">Your key is saved on this server, not in the public page. For a live deployment, set GEMINI_API_KEY as a private environment variable in your hosting dashboard instead.</p>
+<label>Gemini API key</label><input id="geminiKey" type="password" autocomplete="off" placeholder="Paste Gemini API key">
+<div class="actions"><button id="saveKey">Save key</button><span id="keyStatus" class="status"></span></div></div>
+</section>
+</main>
+</div>
+<div class="footer">ShortsForge • Create responsibly with videos you own or are authorized to use.</div>
+</div>
+<script>
+const $=id=>document.getElementById(id);
+document.querySelectorAll("[data-page]").forEach(b=>b.addEventListener("click",()=>{
+ document.querySelectorAll("[data-page]").forEach(x=>x.classList.toggle("active",x===b));
+ $("create").classList.toggle("hidden",b.dataset.page!=="create");
+ $("settings").classList.toggle("hidden",b.dataset.page!=="settings");
+}));
+function timeLabel(n){n=Math.max(0,Math.floor(Number(n)||0));return `${Math.floor(n/60)}:${String(n%60).padStart(2,"0")}`}
+$("analyze").onclick=async()=>{
+ const url=$("youtubeUrl").value.trim();if(!url){$("aiStatus").textContent="Paste a YouTube URL first.";return}
+ $("analyze").disabled=true;$("aiStatus").textContent="Gemini is analyzing the video…";$("clips").innerHTML="";
+ try{
+  const r=await fetch("/api/analyze-youtube",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({youtubeUrl:url})});
+  const d=await r.json();if(!r.ok)throw new Error(d.error||"Analysis failed");
+  const clips=Array.isArray(d.clips)?d.clips:[];
+  if(!clips.length)throw new Error("No clip suggestions were returned.");
+  clips.forEach((c,i)=>{
+   const el=document.createElement("div");el.className="clip";
+   const title=document.createElement("strong");title.textContent=`${i+1}. ${c.title||"Suggested clip"}`;
+   const detail=document.createElement("small");detail.textContent=`${timeLabel(c.start)} – ${timeLabel(c.end)} • ${c.reason||""}`;
+   const hook=document.createElement("p");hook.className="muted";hook.textContent=c.hook||c.caption||"";
+   const use=document.createElement("button");use.className="secondary";use.textContent="Use these times";
+   use.onclick=()=>{$("start").value=Number(c.start)||0;$("end").value=Number(c.end)||45;$("caption").value=c.caption||c.hook||"";document.querySelector(".card:nth-of-type(2)")?.scrollIntoView({behavior:"smooth"});};
+   el.append(title,detail,hook,use);$("clips").append(el);
+  });
+  $("aiStatus").textContent=`Found ${clips.length} clip suggestions.`;
+ }catch(e){$("aiStatus").textContent=e.message}
+ finally{$("analyze").disabled=false}
+};
+$("render").onclick=async()=>{
+ $("render").disabled=true;$("renderStatus").textContent="Rendering on server…";$("downloadResult").textContent="";
+ try{
+  const payload={videoUrl:$("videoUrl").value.trim(),start:Number($("start").value),end:Number($("end").value),caption:$("caption").value};
+  const r=await fetch("/api/render",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
+  const d=await r.json();if(!r.ok)throw new Error(d.error||"Render failed");
+  const a=document.createElement("a");a.href=d.file;a.download=d.filename||"ShortsForge-clip.mp4";a.textContent="⬇ Download your MP4";a.className="download";
+  a.style.cssText="display:inline-block;padding:13px 17px;border-radius:12px;background:#1687ff;color:white;text-decoration:none;font-weight:800";
+  $("downloadResult").append("Your video is ready: ",a);$("renderStatus").textContent="Completed";
+ }catch(e){$("renderStatus").textContent=e.message}
+ finally{$("render").disabled=false}
+};
+$("saveKey").onclick=async()=>{
+ const key=$("geminiKey").value.trim();if(!key){$("keyStatus").textContent="Enter your API key.";return}
+ $("saveKey").disabled=true;$("keyStatus").textContent="Saving securely…";
+ try{const r=await fetch("/api/settings",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({geminiKey:key})});const d=await r.json();if(!r.ok)throw new Error(d.error);$("geminiKey").value="";$("keyStatus").textContent="Gemini key saved on this server."}
+ catch(e){$("keyStatus").textContent=e.message}finally{$("saveKey").disabled=false}
+};
+</script>
+</body>
+</html>
