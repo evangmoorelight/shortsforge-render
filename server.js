@@ -54,41 +54,73 @@ function isPrivateHost(host) {
 }
 async function downloadAuthorizedSource(rawUrl, dest) {
   let url;
-  try { url = new URL(rawUrl); } catch { throw new Error("Enter a valid direct video file URL."); }
+  try { url = new URL(rawUrl); } catch { throw new Error("Enter a valid video URL."); }
   if (!["http:", "https:"].includes(url.protocol) || isPrivateHost(url.hostname)) {
     throw new Error("The source must be a public HTTP or HTTPS video URL.");
   }
 
-  const response = await fetch(url, { redirect: "follow" });
-  if (!response.ok) throw new Error(`Could not retrieve source video (${response.status}).`);
+  // Some legitimate hosting services (including download.php endpoints) send
+  // the media as an attachment or application/octet-stream instead of video/mp4.
+  const response = await fetch(url, {
+    redirect: "follow",
+    headers: {
+      "User-Agent": "Mozilla/5.0 (compatible; ShortsForge/1.0)",
+      "Accept": "video/*, application/octet-stream, application/download, */*;q=0.8"
+    },
+    signal: AbortSignal.timeout(15 * 60 * 1000)
+  });
+  if (!response.ok) throw new Error(`Could not retrieve source video (${response.status}). The download link may have expired or require browser access.`);
+
   const finalUrl = new URL(response.url);
   if (!["http:", "https:"].includes(finalUrl.protocol) || isPrivateHost(finalUrl.hostname)) {
+    await response.body?.cancel();
     throw new Error("The redirected video source is not allowed.");
   }
+
   const type = (response.headers.get("content-type") || "").toLowerCase();
-  if (!(type.startsWith("video/") || type.includes("octet-stream"))) {
-    throw new Error("That URL does not appear to point directly to a video file. Use a direct MP4/MOV/WebM media URL.");
+  const disposition = (response.headers.get("content-disposition") || "").toLowerCase();
+  const pathName = finalUrl.pathname.toLowerCase();
+  const downloadEndpoint = /\/(download|file|fetch)(\.php)?$/i.test(pathName) || pathName.endsWith(".php");
+  const looksLikeVideo = type.startsWith("video/") ||
+    type.includes("octet-stream") || type.includes("application/download") ||
+    type.includes("application/x-download") || disposition.includes("attachment") ||
+    downloadEndpoint;
+  if (!looksLikeVideo) {
+    await response.body?.cancel();
+    throw new Error("This link did not return a recognizable video download. Use a direct MP4 link or a download link that returns the video file.");
   }
+
   const maxBytes = 2 * 1024 * 1024 * 1024;
   const declared = Number(response.headers.get("content-length") || 0);
-  if (declared > maxBytes) throw new Error("Video exceeds the 2 GB server limit.");
+  if (declared > maxBytes) {
+    await response.body?.cancel();
+    throw new Error("Video exceeds the 2 GB server limit.");
+  }
+  if (!response.body) throw new Error("The video server returned an empty response.");
+
   const file = fs.createWriteStream(dest);
   let total = 0;
   try {
     for await (const chunk of response.body) {
       total += chunk.length;
       if (total > maxBytes) throw new Error("Video exceeds the 2 GB server limit.");
-      if (!file.write(chunk)) await new Promise(resolve => file.once("drain", resolve));
+      if (!file.write(chunk)) await new Promise((resolve, reject) => {
+        file.once("drain", resolve);
+        file.once("error", reject);
+      });
     }
-  } finally {
-    file.end();
+    await new Promise((resolve, reject) => {
+      file.once("error", reject);
+      file.end(resolve);
+    });
+  } catch (err) {
+    file.destroy();
+    fs.unlink(dest, () => {});
+    throw err;
   }
-  await new Promise((resolve, reject) => {
-    file.once("finish", resolve);
-    file.once("error", reject);
-  });
   if (!total) throw new Error("The video source was empty.");
 }
+
 function parseGeminiText(data) {
   if (data.output_text) return data.output_text;
   const result = [];
@@ -101,7 +133,7 @@ function parseGeminiText(data) {
 app.get("/api/status", (req, res) => res.json({
   geminiConfigured: Boolean(getKey()),
   renderer: "FFmpeg",
-  sourcePolicy: "Authorized direct video file URLs only"
+  sourcePolicy: "Authorized direct video URLs and attachment/download endpoints"
 }));
 
 app.post("/api/settings", (req, res) => {
@@ -154,14 +186,14 @@ Use seconds for start and end. Each clip should be 20 to 60 seconds. Do not inve
 
 app.post("/api/render", async (req, res) => {
   const id = crypto.randomBytes(8).toString("hex");
-  const source = path.join(OUT, `${id}-source`);
+  const source = path.join(OUT, `${id}-source.mp4`);
   const output = path.join(OUT, `${id}-short.mp4`);
   try {
     const videoUrl = String(req.body?.videoUrl || "").trim();
     const start = Number(req.body?.start);
     const end = Number(req.body?.end);
     const caption = String(req.body?.caption || "").trim().slice(0, 220);
-    if (!videoUrl) return res.status(400).json({ error: "Paste a direct video file URL." });
+    if (!videoUrl) return res.status(400).json({ error: "Paste a direct video URL or a download link." });
     if (!Number.isFinite(start) || !Number.isFinite(end) || start < 0 || end <= start || end - start > 180) {
       return res.status(400).json({ error: "Choose a valid clip between 1 and 180 seconds." });
     }

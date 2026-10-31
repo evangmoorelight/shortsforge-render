@@ -28,3 +28,7 @@ Open `http://localhost:3000`.
 - The app stores a Gemini key in `data/settings.json` if entered in Settings. Prefer Render's private `GEMINI_API_KEY` environment variable for a public deployment.
 - Add persistent disk storage if you want generated MP4s to remain available after server restarts. Without it, output files are temporary.
 - This is a starter deployment. Add authentication, rate limits, storage cleanup, and a persistent disk before public production use.
+
+
+### Supported video sources
+The renderer accepts public MP4/MOV/WebM URLs and authorized download endpoints that return a video as `video/*`, `application/octet-stream`, or an attachment (including common `download.php` endpoints). The server follows HTTP redirects and downloads the response before FFmpeg renders the selected clip. Links that expire, require browser cookies/login, block server requests, or return an HTML landing page may not work. Only use videos you own or are authorized to use; YouTube download restrictions are not bypassed.
