@@ -30,9 +30,9 @@
 </div>
 <div class="card">
 <div class="eyebrow">MP4 RENDERER</div><div class="h">Create an actual video file</div>
-<div class="note">To export without uploading from your phone, provide a direct public media-file URL for a video you own or are authorized to use (for example, an MP4 hosted on your own website or cloud storage). A YouTube watch-page URL is not a direct media file, and this app does not bypass YouTube download restrictions.</div>
-<label>Authorized direct video-file URL</label>
-<input id="videoUrl" type="url" placeholder="https://your-site.com/my-sermon-video.mp4">
+<div class="note">To export without uploading from your phone, provide a public media URL for a video you own or are authorized to use. This includes MP4 links and download endpoints such as download.php that return the video as an attachment or binary file. A YouTube watch-page URL is not a direct media file, and this app does not bypass YouTube download restrictions.</div>
+<label>Video URL or download link</label>
+<input id="videoUrl" type="url" placeholder="https://example.com/video.mp4 or https://host.com/download.php?...">
 <div class="row">
 <div><label>Start time (seconds)</label><input id="start" type="number" min="0" value="0"></div>
 <div><label>End time (seconds)</label><input id="end" type="number" min="1" value="45"></div>
