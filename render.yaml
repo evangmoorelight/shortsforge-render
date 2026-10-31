@@ -1,0 +1,8 @@
+services:
+  - type: web
+    name: shortsforge
+    runtime: docker
+    plan: starter
+    envVars:
+      - key: GEMINI_API_KEY
+        sync: false
